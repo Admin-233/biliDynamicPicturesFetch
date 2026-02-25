@@ -24,32 +24,33 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
+#获取新动态页，设置为-1开启无限重试
+GET_PAGE_MAX_RETRY = -1
+
 #分段下载
 CHUNK_SIZE = 64 * 1024  # 64KB
-MAX_RETRY = 3
+DOWNLOAD_MAX_RETRY = 5
 
 async def get_all_dynamics(User: user.User) -> list:
     offset = ""     # 用于记录下一次起点
     dynamics = []   # 用于存储所有动态
-    count = 0       #已经获取的页面计数
+    count = 0       # 已经获取的页面计数
     
     while True:
         count += 1
         print("Page:", count)
         
         
-        #尝试获取动态，重试10次
-        max_retry = 10
         retry = 0
 
-        while retry < max_retry:
+        while retry < GET_PAGE_MAX_RETRY or GET_PAGE_MAX_RETRY == -1:   # 将会尝试获取动态
             try:
                 # 获取该页动态
                 page = await User.get_dynamics_new(offset)
                 break  # 成功就跳出循环
             except:
                 retry += 1
-                print(f"failed, retry {retry}/{max_retry}")
+                print(f"failed, retry {retry}/{GET_PAGE_MAX_RETRY}")
                 
                 # 指数退避 + 随机延时
                 await asyncio.sleep((2 ** retry) * 0.2 + random.random() * 0.3)
@@ -81,7 +82,7 @@ async def download_and_modify_time(url, timestamp, save_dir, semaphore, session)
             print("文件重复", filepath)
             return 1
 
-        for attempt in range(1, MAX_RETRY + 1):
+        for attempt in range(1, DOWNLOAD_MAX_RETRY + 1):
             try:
                 async with session.get(url, headers=HEADERS) as resp:
                     if resp.status != 200:
@@ -108,7 +109,7 @@ async def download_and_modify_time(url, timestamp, save_dir, semaphore, session)
                 asyncio.TimeoutError,
                 ConnectionResetError,
             ) as e:
-                print(f"重试 {attempt}/{MAX_RETRY}:", url, "|", type(e).__name__)
+                print(f"重试 {attempt}/{DOWNLOAD_MAX_RETRY}:", url, "|", type(e).__name__)
 
                 # 指数退避 + 随机抖动（防风控）
                 await asyncio.sleep((2 ** attempt) + random.random())
