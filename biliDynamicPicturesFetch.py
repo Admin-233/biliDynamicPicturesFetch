@@ -1,16 +1,19 @@
 import os
+import random
 from bilibili_api import user, dynamic, Credential, select_client
 import asyncio
 import aiohttp
 from urllib.parse import urlparse
+
+import pdb
 
 #登录信息
 SESSDATA = ""
 BILI_JCT = ""
 BUVID3 = ""
 
-TargetUID = "114640514"
-SAVE_DIR = r"C:\Users\Admin_233\Desktop\biliDownload\result2"
+TargetUID = "3493131167205984"
+SAVE_DIR = r"C:\result"
 
 select_client("aiohttp")
 
@@ -34,8 +37,25 @@ async def get_all_dynamics(User: user.User) -> list:
         count += 1
         print("Page:", count)
         
-        # 获取该页动态
-        page = await User.get_dynamics_new(offset)
+        
+        #尝试获取动态，重试10次
+        max_retry = 10
+        retry = 0
+
+        while retry < max_retry:
+            try:
+                # 获取该页动态
+                page = await User.get_dynamics_new(offset)
+                break  # 成功就跳出循环
+            except:
+                retry += 1
+                print(f"failed, retry {retry}/{max_retry}")
+                
+                # 指数退避 + 随机延时
+                await asyncio.sleep((2 ** retry) * 0.2 + random.random() * 0.3)
+        else:
+            # 循环正常结束（没有 break），说明重试 10 次仍失败
+            pdb.set_trace()
 
         dynamics.extend(page["items"])
 
