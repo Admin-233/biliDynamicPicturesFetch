@@ -52,8 +52,11 @@ async def get_all_dynamics(User: user.User) -> list:
                 retry += 1
                 print(f"failed, retry {retry}/{GET_PAGE_MAX_RETRY}")
                 
-                # 指数退避 + 随机延时
-                await asyncio.sleep((2 ** retry) * 0.2 + random.random() * 0.3)
+                if GET_PAGE_MAX_RETRY >= 0:
+                    # 指数退避 + 随机延时
+                    await asyncio.sleep((2 ** retry) * 0.2 + random.random() * 0.3)
+                else:
+                    await asyncio.sleep(0.5)
         else:
             # 循环正常结束（没有 break），说明重试 10 次仍失败
             pdb.set_trace()
